@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#f5f6f8">
-  <title>Liigan sarjataulukko 2026–2027</title>
+  <title>Liigan sarjataulukko </title>
   <style>
     :root {
       color-scheme: light dark;
@@ -151,6 +151,11 @@
   const STANDINGS_URL = `${API_BASE}/standings?season=${SEASON}`;
   // Liigan games-endpoint accepts tournament=runkosarja and season=YYYY.
   const GAMES_URL = `${API_BASE}/games?tournament=runkosarja&season=${SEASON}`;
+  const FINISHED_TYPE_LABELS = {
+    ENDED_DURING_REGULAR_GAME_TIME: 'Päättyi varsinaisella peliajalla',
+    ENDED_DURING_EXTENDED_GAME_TIME: 'Päättyi jatkoajalla',
+    ENDED_DURING_WINNING_SHOT_COMPETITION: 'Päättyi voittolaukauksilla'
+  };
 
   const table = document.querySelector('#standings');
   const tbody = table.querySelector('tbody');
@@ -180,6 +185,45 @@
     const logos = team.teamLogos || {};
     const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     return (dark ? logos.darkBg : logos.lightBg) || logos.lightBg || logos.darkBg || '';
+  }
+
+  function gameTeamLogoUrl(gameTeam) {
+    if (!gameTeam) return '';
+    const directLogo = logoUrl(gameTeam);
+    if (directLogo) return directLogo;
+
+    const gameTeamId = gameTeam.teamId ?? gameTeam.id;
+    const standingsTeam = teams.find(team => {
+      const standingsTeamId = team.teamId ?? team.id;
+      const sameId = gameTeamId != null && standingsTeamId != null
+        && String(gameTeamId) === String(standingsTeamId);
+      return sameId || team.teamName === gameTeam.teamName;
+    });
+    return standingsTeam ? logoUrl(standingsTeam) : '';
+  }
+
+  function fillGameTeamCell(cell, gameTeam) {
+    const wrap = document.createElement('div');
+    wrap.className = 'team-cell';
+    const src = gameTeamLogoUrl(gameTeam);
+    if (src) {
+      const img = document.createElement('img');
+      img.className = 'logo';
+      img.src = src;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.onerror = () => img.remove();
+      wrap.append(img);
+    }
+    const name = document.createElement('span');
+    name.textContent = gameTeam?.teamName || '—';
+    wrap.append(name);
+    cell.append(wrap);
+  }
+
+  function gameStatusText(game) {
+    if (!isPlayed(game)) return game.started ? 'Käynnissä' : 'Tulossa';
+    return FINISHED_TYPE_LABELS[game.finishedType] || game.finishedType || 'Päättynyt';
   }
 
   function renderStandings() {
@@ -255,6 +299,7 @@
       sortKey = 'ranking';
       sortDirection = 1;
       renderStandings();
+      if (resultsLoaded) renderGames();
       table.hidden = false;
       status.hidden = true;
       updated.textContent = `Päivitetty ${new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`;
@@ -302,7 +347,7 @@
 
       const home = document.createElement('td');
       home.className = 'team-name';
-      home.textContent = game.homeTeam?.teamName || '—';
+      fillGameTeamCell(home, game.homeTeam);
       tr.append(home);
 
       const score = document.createElement('td');
@@ -314,11 +359,11 @@
 
       const away = document.createElement('td');
       away.className = 'team-name';
-      away.textContent = game.awayTeam?.teamName || '—';
+      fillGameTeamCell(away, game.awayTeam);
       tr.append(away);
 
       const state = document.createElement('td');
-      state.textContent = isPlayed(game) ? (game.finishedType || 'Päättynyt') : (game.started ? 'Käynnissä' : 'Tulossa');
+      state.textContent = gameStatusText(game);
       tr.append(state);
       resultsBody.append(tr);
     }
@@ -373,7 +418,10 @@
   resultFilter.addEventListener('change', renderGames);
   document.querySelector('#tab-standings').addEventListener('click', () => showView('standings'));
   document.querySelector('#tab-results').addEventListener('click', () => showView('results'));
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', renderStandings);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+    renderStandings();
+    if (resultsLoaded) renderGames();
+  });
   loadStandings();
 })();
 </script>
