@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f6f8">
+  <title>Liigan sarjataulukko 2026–2027</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f6f8; --surface: #fff; --text: #17191d; --muted: #626976;
+      --line: #e0e3e8; --hover: #f0f3f7; --accent: #1459a6;
+      --header: #edf0f4; --shadow: 0 1px 4px rgb(0 0 0 / 6%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101216; --surface: #191c22; --text: #f0f2f5; --muted: #a5adba;
+        --line: #303640; --hover: #242a33; --accent: #8abaff;
+        --header: #20252d; --shadow: 0 1px 4px rgb(0 0 0 / 20%);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1100px; margin: 0 auto; padding: 22px 14px 36px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    h1 { font-size: clamp(1.25rem, 4vw, 1.8rem); line-height: 1.2; margin: 0; letter-spacing: -.025em; }
+    .subtitle { color: var(--muted); margin: 6px 0 0; font-size: .9rem; }
+    button { font: inherit; }
+    #refresh {
+      flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px;
+      background: var(--surface); color: var(--text); padding: 9px 12px;
+      cursor: pointer; box-shadow: var(--shadow);
+    }
+    #refresh:disabled { opacity: .55; cursor: wait; }
+    .tabs { display: flex; gap: 8px; margin: 0 0 14px; }
+    .tab {
+      border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px;
+      background: var(--surface); color: var(--text); cursor: pointer; font: inherit;
+    }
+    .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .result-tools { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+    .result-tools label { color: var(--muted); font-size: .88rem; }
+    .result-tools select {
+      font: inherit; color: var(--text); background: var(--surface);
+      border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+    }
+    .game-table { min-width: 570px; }
+    .game-table th, .game-table td { text-align: left; }
+    .game-table td.date { color: var(--muted); font-size: .88rem; }
+    .game-table td.score { text-align: center; font-weight: 750; }
+    .game-table td.team-name { min-width: 130px; }
+    .game-table tr.upcoming td.score { color: var(--muted); font-weight: 500; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 690px; font-variant-numeric: tabular-nums; }
+    thead th { position: sticky; top: 0; background: var(--header); z-index: 1; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+    th { font-size: .78rem; color: var(--muted); font-weight: 650; }
+    th:first-child, td:first-child { text-align: center; width: 54px; }
+    th.team, td.team { text-align: left; }
+    th.team { min-width: 165px; }
+    th button {
+      border: 0; background: transparent; color: inherit; padding: 3px 0;
+      cursor: pointer; font: inherit; white-space: nowrap;
+    }
+    th button:focus-visible, #refresh:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    th button[aria-sort="ascending"], th button[aria-sort="descending"] { color: var(--accent); }
+    .sort-icon { display: inline-block; width: 1em; margin-left: 3px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: var(--hover); }
+    .rank { font-weight: 750; }
+    .team-cell { display: flex; align-items: center; gap: 9px; font-weight: 650; }
+    .logo { width: 30px; height: 30px; object-fit: contain; flex: 0 0 30px; }
+    .status { color: var(--muted); font-size: .85rem; padding: 12px 14px; }
+    .status.error { color: #d84b4b; }
+    .footer { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .78rem; padding: 10px 14px; border-top: 1px solid var(--line); }
+    @media (max-width: 520px) {
+      main { padding: 16px 8px 24px; }
+      .top { align-items: flex-start; }
+      #refresh { padding: 8px 10px; }
+      th, td { padding: 11px 8px; }
+      .footer { font-size: .74rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Liigan sarjataulukko</h1>
+      <p class="subtitle">Kausi 2026–2027 · Runkosarja</p>
+    </div>
+    <button id="refresh" type="button">↻ Päivitä</button>
+  </header>
+  <nav class="tabs" aria-label="Näkymä">
+    <button class="tab" id="tab-standings" type="button" aria-selected="true">Sarjataulukko</button>
+    <button class="tab" id="tab-results" type="button" aria-selected="false">Ottelut</button>
+  </nav>
+  <section class="panel" id="standings-panel" aria-label="Liigan sarjataulukko">
+    <div id="status" class="status" role="status">Haetaan sarjataulukkoa…</div>
+    <div class="table-scroll">
+      <table id="standings" hidden>
+        <thead><tr>
+          <th scope="col"><button data-key="ranking" aria-sort="ascending">Sij.<span class="sort-icon">↑</span></button></th>
+          <th scope="col" class="team">Joukkue</th>
+          <th scope="col"><button data-key="winPercentage">Voitto-%<span class="sort-icon">↕</span></button></th>
+          <th scope="col"><button data-key="games">Ottelut<span class="sort-icon">↕</span></button></th>
+          <th scope="col"><button data-key="wins">V<span class="sort-icon">↕</span></button></th>
+          <th scope="col"><button data-key="losses">T<span class="sort-icon">↕</span></button></th>
+          <th scope="col"><button data-key="overtimeWins">JAV<span class="sort-icon">↕</span></button></th>
+          <th scope="col"><button data-key="overtimeLosses">JAT<span class="sort-icon">↕</span></button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="footer"><span id="count">—</span><span id="updated">—</span></div>
+  </section>
+  <section class="panel" id="results-panel" aria-label="Liigan ottelut" hidden>
+    <div class="result-tools">
+      <label for="result-filter">Näytä</label>
+      <select id="result-filter">
+        <option value="played">Pelatut ottelut</option>
+        <option value="upcoming">Tulevat ottelut</option>
+        <option value="all">Kaikki ottelut</option>
+      </select>
+      <button id="refresh-results" type="button">↻ Päivitä</button>
+    </div>
+    <div id="results-status" class="status" role="status">Haetaan otteluita…</div>
+    <div class="table-scroll">
+      <table id="results-table" class="game-table" hidden>
+        <thead><tr><th scope="col">Päivä</th><th scope="col">Koti</th><th scope="col">Tulos</th><th scope="col">Vieras</th><th scope="col">Tila</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="footer"><span id="results-count">—</span><span id="results-updated">—</span></div>
+  </section>
+  <p class="subtitle" id="standings-help">V = voitot · T = tappiot · JAV = jatkoaikavoitot · JAT = jatkoaikatappiot. Lajittele napauttamalla sarakeotsikkoa.</p>
+  <p class="subtitle" id="results-help" hidden>Ottelutiedot haetaan Liigan julkisesta API:sta. Pelatut ottelut näytetään uusimmasta vanhimpaan.</p>
+</main>
+<script>
+(() => {
+  const API_BASE = 'https://www.liiga.fi/api/v2';
+  const SEASON = 2027;
+  const STANDINGS_URL = `${API_BASE}/standings?season=${SEASON}`;
+  const GAMES_URL = `${API_BASE}/games?tournament=runkosarja&season=${SEASON}`;
+  const table = document.querySelector('#standings');
+  const tbody = table.querySelector('tbody');
+  const status = document.querySelector('#status');
+  const refresh = document.querySelector('#refresh');
+  const count = document.querySelector('#count');
+  const updated = document.querySelector('#updated');
+  const resultsPanel = document.querySelector('#results-panel');
+  const standingsPanel = document.querySelector('#standings-panel');
+  const resultsStatus = document.querySelector('#results-status');
+  const resultsTable = document.querySelector('#results-table');
+  const resultsBody = resultsTable.querySelector('tbody');
+  const resultsCount = document.querySelector('#results-count');
+  const resultsUpdated = document.querySelector('#results-updated');
+  const resultFilter = document.querySelector('#result-filter');
+  const refreshResults = document.querySelector('#refresh-results');
+  const fmtPct = new Intl.NumberFormat('fi-FI', { style: 'percent', maximumFractionDigits: 1 });
+  const fmtDateTime = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const FINISHED_TYPE_TRANSLATIONS = {
+    ENDED_DURING_REGULAR_GAME_TIME: 'Päättyi varsinaisella peliajalla',
+    ENDED_DURING_EXTENDED_GAME_TIME: 'Päättyi jatkoajalla',
+    ENDED_DURING_WINNING_SHOT_COMPETITION: 'Päättyi voittolaukauksilla'
+  };
+  let teams = [];
+  let games = [];
+  let sortKey = 'ranking';
+  let sortDirection = 1;
+  let resultsLoaded = false;
+
+  function logoUrl(team) {
+    const logos = team?.teamLogos || team?.logos || {};
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return (dark ? logos.darkBg : logos.lightBg) || logos.lightBg || logos.darkBg || '';
+  }
+
+  function createTeamCell(team) {
+    const td = document.createElement('td');
+    td.className = 'team-name';
+    const wrap = document.createElement('div');
+    wrap.className = 'team-cell';
+    const src = logoUrl(team);
+    if (src) {
+      const img = document.createElement('img');
+      img.className = 'logo';
+      img.src = src;
+      img.alt = team?.teamName || '';
+      img.loading = 'lazy';
+      img.onerror = () => img.remove();
+      wrap.append(img);
+    }
+    const name = document.createElement('span');
+    name.textContent = team?.teamName || '—';
+    wrap.append(name);
+    td.append(wrap);
+    return td;
+  }
+
+  function renderStandings() {
+    const sorted = [...teams].sort((a, b) => {
+      const av = Number(a[sortKey] ?? 0);
+      const bv = Number(b[sortKey] ?? 0);
+      return (av - bv) * sortDirection || String(a.teamName).localeCompare(String(b.teamName), 'fi');
+    });
+    tbody.replaceChildren();
+    for (const team of sorted) {
+      const tr = document.createElement('tr');
+      const rank = document.createElement('td');
+      rank.className = 'rank';
+      rank.textContent = team.ranking;
+      tr.append(rank);
+      const nameCell = document.createElement('td');
+      nameCell.className = 'team';
+      const wrap = document.createElement('div');
+      wrap.className = 'team-cell';
+      const src = logoUrl(team);
+      if (src) {
+        const img = document.createElement('img');
+        img.className = 'logo';
+        img.src = src;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.onerror = () => img.remove();
+        wrap.append(img);
+      }
+      const name = document.createElement('span');
+      name.textContent = team.teamName;
+      wrap.append(name);
+      nameCell.append(wrap);
+      tr.append(nameCell);
+      const values = [
+        fmtPct.format(Number(team.winPercentage || 0)),
+        team.games ?? '—', team.wins ?? '—', team.losses ?? '—',
+        team.overtimeWins ?? '—', team.overtimeLosses ?? '—'
+      ];
+      for (const value of values) {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    for (const button of table.querySelectorAll('thead button[data-key]')) {
+      const active = button.dataset.key === sortKey;
+      button.setAttribute('aria-sort', active ? (sortDirection === 1 ? 'ascending' : 'descending') : 'none');
+      button.querySelector('.sort-icon').textContent = active ? (sortDirection === 1 ? '↑' : '↓') : '↕';
+    }
+    count.textContent = `${teams.length} joukkuetta`;
+  }
+
+  async function loadStandings() {
+    refresh.disabled = true;
+    status.hidden = false;
+    status.classList.remove('error');
+    status.textContent = 'Haetaan sarjataulukkoa…';
+    try {
+      const response = await fetch(STANDINGS_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+      if (!response.ok) throw new Error(`API palautti HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data.season)) throw new Error('Vastauksen season-taulukkoa ei löytynyt.');
+      teams = data.season.filter(team => team.serie === 'RUNKOSARJA' && Number(team.ranking) > 0);
+      if (!teams.length) throw new Error('Runkosarjan joukkueita ei löytynyt vastauksesta.');
+      sortKey = 'ranking';
+      sortDirection = 1;
+      renderStandings();
+      table.hidden = false;
+      status.hidden = true;
+      updated.textContent = `Päivitetty ${new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`;
+    } catch (error) {
+      status.classList.add('error');
+      status.textContent = `Sarjataulukon lataus epäonnistui: ${error.message}. Tarkista verkkoyhteys tai API:n CORS-asetukset.`;
+    } finally {
+      refresh.disabled = false;
+    }
+  }
+
+  function parseGameDate(game) {
+    const value = game.start || game.startTime || game.date;
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function isPlayed(game) {
+    return Boolean(game.ended) && game.homeTeam?.goals != null && game.awayTeam?.goals != null;
+  }
+
+  function renderGames() {
+    const filter = resultFilter.value;
+    let filtered = games.filter(game => {
+      if (filter === 'played') return isPlayed(game);
+      if (filter === 'upcoming') return !isPlayed(game);
+      return true;
+    });
+    filtered.sort((a, b) => {
+      const ad = parseGameDate(a)?.getTime() ?? 0;
+      const bd = parseGameDate(b)?.getTime() ?? 0;
+      return filter === 'upcoming' ? ad - bd : bd - ad;
+    });
+    resultsBody.replaceChildren();
+    for (const game of filtered) {
+      const tr = document.createElement('tr');
+      if (!isPlayed(game)) tr.className = 'upcoming';
+      const date = parseGameDate(game);
+      const dateCell = document.createElement('td');
+      dateCell.className = 'date';
+      dateCell.textContent = date ? fmtDateTime.format(date) : '—';
+      tr.append(dateCell);
+      tr.append(createTeamCell(game.homeTeam));
+      const score = document.createElement('td');
+      score.className = 'score';
+      score.textContent = isPlayed(game) ? `${game.homeTeam.goals}–${game.awayTeam.goals}` : '–';
+      tr.append(score);
+      tr.append(createTeamCell(game.awayTeam));
+      const state = document.createElement('td');
+      state.textContent = isPlayed(game)
+        ? (FINISHED_TYPE_TRANSLATIONS[game.finishedType] || 'Päättynyt')
+        : (game.started ? 'Käynnissä' : 'Tulossa');
+      tr.append(state);
+      resultsBody.append(tr);
+    }
+    resultsTable.hidden = false;
+    resultsStatus.hidden = true;
+    resultsCount.textContent = `${filtered.length} ottelua`;
+  }
+
+  async function loadGames() {
+    refreshResults.disabled = true;
+    resultsStatus.hidden = false;
+    resultsStatus.classList.remove('error');
+    resultsStatus.textContent = 'Haetaan otteluita…';
+    try {
+      const response = await fetch(GAMES_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+      if (!response.ok) throw new Error(`API palautti HTTP ${response.status}`);
+      const payload = await response.json();
+      games = Array.isArray(payload) ? payload : (Array.isArray(payload.games) ? payload.games : []);
+      if (!games.length) throw new Error('Ottelulistaa ei löytynyt vastauksesta.');
+      resultsLoaded = true;
+      renderGames();
+      resultsUpdated.textContent = `Päivitetty ${new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`;
+    } catch (error) {
+      resultsStatus.classList.add('error');
+      resultsStatus.textContent = `Otteluiden lataus epäonnistui: ${error.message}. Tarkista verkkoyhteys tai API:n CORS-asetukset.`;
+    } finally {
+      refreshResults.disabled = false;
+    }
+  }
+
+  function showView(view) {
+    const showStandings = view === 'standings';
+    standingsPanel.hidden = !showStandings;
+    resultsPanel.hidden = showStandings;
+    document.querySelector('#standings-help').hidden = !showStandings;
+    document.querySelector('#results-help').hidden = showStandings;
+    document.querySelector('#tab-standings').setAttribute('aria-selected', String(showStandings));
+    document.querySelector('#tab-results').setAttribute('aria-selected', String(!showStandings));
+    if (!showStandings && !resultsLoaded) loadGames();
+  }
+
+  table.querySelector('thead').addEventListener('click', event => {
+    const button = event.target.closest('button[data-key]');
+    if (!button || !teams.length) return;
+    const key = button.dataset.key;
+    if (key === sortKey) sortDirection *= -1;
+    else { sortKey = key; sortDirection = key === 'ranking' ? 1 : -1; }
+    renderStandings();
+  });
+  refresh.addEventListener('click', loadStandings);
+  refreshResults.addEventListener('click', loadGames);
+  resultFilter.addEventListener('change', renderGames);
+  document.querySelector('#tab-standings').addEventListener('click', () => showView('standings'));
+  document.querySelector('#tab-results').addEventListener('click', () => showView('results'));
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+    renderStandings();
+    if (resultsLoaded) renderGames();
+  });
+  loadStandings();
+})();
+</script>
+</body>
+</html>
