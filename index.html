@@ -100,6 +100,7 @@
     <button class="tab" id="tab-standings" type="button" aria-selected="true">Sarjataulukko</button>
     <button class="tab" id="tab-results" type="button" aria-selected="false">Ottelut</button>
   </nav>
+
   <section class="panel" id="standings-panel" aria-label="Liigan sarjataulukko">
     <div id="status" class="status" role="status">Haetaan sarjataulukkoa…</div>
     <div class="table-scroll">
@@ -107,6 +108,7 @@
         <thead><tr>
           <th scope="col"><button data-key="ranking" aria-sort="ascending">Sij.<span class="sort-icon">↑</span></button></th>
           <th scope="col" class="team">Joukkue</th>
+          <th scope="col"><button data-key="points">Pisteet<span class="sort-icon">↕</span></button></th>
           <th scope="col"><button data-key="winPercentage">Voitto-%<span class="sort-icon">↕</span></button></th>
           <th scope="col"><button data-key="games">Ottelut<span class="sort-icon">↕</span></button></th>
           <th scope="col"><button data-key="wins">V<span class="sort-icon">↕</span></button></th>
@@ -119,6 +121,7 @@
     </div>
     <div class="footer"><span id="count">—</span><span id="updated">—</span></div>
   </section>
+
   <section class="panel" id="results-panel" aria-label="Liigan ottelut" hidden>
     <div class="result-tools">
       <label for="result-filter">Näytä</label>
@@ -146,7 +149,9 @@
   const API_BASE = 'https://www.liiga.fi/api/v2';
   const SEASON = 2027;
   const STANDINGS_URL = `${API_BASE}/standings?season=${SEASON}`;
+  // Liigan games-endpoint accepts tournament=runkosarja and season=YYYY.
   const GAMES_URL = `${API_BASE}/games?tournament=runkosarja&season=${SEASON}`;
+
   const table = document.querySelector('#standings');
   const tbody = table.querySelector('tbody');
   const status = document.querySelector('#status');
@@ -163,12 +168,8 @@
   const resultFilter = document.querySelector('#result-filter');
   const refreshResults = document.querySelector('#refresh-results');
   const fmtPct = new Intl.NumberFormat('fi-FI', { style: 'percent', maximumFractionDigits: 1 });
+  const fmtDate = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' });
   const fmtDateTime = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const FINISHED_TYPE_TRANSLATIONS = {
-    ENDED_DURING_REGULAR_GAME_TIME: 'Päättyi varsinaisella peliajalla',
-    ENDED_DURING_EXTENDED_GAME_TIME: 'Päättyi jatkoajalla',
-    ENDED_DURING_WINNING_SHOT_COMPETITION: 'Päättyi voittolaukauksilla'
-  };
   let teams = [];
   let games = [];
   let sortKey = 'ranking';
@@ -176,31 +177,9 @@
   let resultsLoaded = false;
 
   function logoUrl(team) {
-    const logos = team?.teamLogos || team?.logos || {};
+    const logos = team.teamLogos || {};
     const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     return (dark ? logos.darkBg : logos.lightBg) || logos.lightBg || logos.darkBg || '';
-  }
-
-  function createTeamCell(team) {
-    const td = document.createElement('td');
-    td.className = 'team-name';
-    const wrap = document.createElement('div');
-    wrap.className = 'team-cell';
-    const src = logoUrl(team);
-    if (src) {
-      const img = document.createElement('img');
-      img.className = 'logo';
-      img.src = src;
-      img.alt = team?.teamName || '';
-      img.loading = 'lazy';
-      img.onerror = () => img.remove();
-      wrap.append(img);
-    }
-    const name = document.createElement('span');
-    name.textContent = team?.teamName || '—';
-    wrap.append(name);
-    td.append(wrap);
-    return td;
   }
 
   function renderStandings() {
@@ -216,6 +195,7 @@
       rank.className = 'rank';
       rank.textContent = team.ranking;
       tr.append(rank);
+
       const nameCell = document.createElement('td');
       nameCell.className = 'team';
       const wrap = document.createElement('div');
@@ -235,10 +215,15 @@
       wrap.append(name);
       nameCell.append(wrap);
       tr.append(nameCell);
+
       const values = [
+        team.points ?? '—',
         fmtPct.format(Number(team.winPercentage || 0)),
-        team.games ?? '—', team.wins ?? '—', team.losses ?? '—',
-        team.overtimeWins ?? '—', team.overtimeLosses ?? '—'
+        team.games ?? '—',
+        team.wins ?? '—',
+        team.losses ?? '—',
+        team.overtimeWins ?? '—',
+        team.overtimeLosses ?? '—'
       ];
       for (const value of values) {
         const td = document.createElement('td');
@@ -304,6 +289,7 @@
       const bd = parseGameDate(b)?.getTime() ?? 0;
       return filter === 'upcoming' ? ad - bd : bd - ad;
     });
+
     resultsBody.replaceChildren();
     for (const game of filtered) {
       const tr = document.createElement('tr');
@@ -313,16 +299,26 @@
       dateCell.className = 'date';
       dateCell.textContent = date ? fmtDateTime.format(date) : '—';
       tr.append(dateCell);
-      tr.append(createTeamCell(game.homeTeam));
+
+      const home = document.createElement('td');
+      home.className = 'team-name';
+      home.textContent = game.homeTeam?.teamName || '—';
+      tr.append(home);
+
       const score = document.createElement('td');
       score.className = 'score';
-      score.textContent = isPlayed(game) ? `${game.homeTeam.goals}–${game.awayTeam.goals}` : '–';
+      score.textContent = isPlayed(game)
+        ? `${game.homeTeam.goals}–${game.awayTeam.goals}`
+        : '–';
       tr.append(score);
-      tr.append(createTeamCell(game.awayTeam));
+
+      const away = document.createElement('td');
+      away.className = 'team-name';
+      away.textContent = game.awayTeam?.teamName || '—';
+      tr.append(away);
+
       const state = document.createElement('td');
-      state.textContent = isPlayed(game)
-        ? (FINISHED_TYPE_TRANSLATIONS[game.finishedType] || 'Päättynyt')
-        : (game.started ? 'Käynnissä' : 'Tulossa');
+      state.textContent = isPlayed(game) ? (game.finishedType || 'Päättynyt') : (game.started ? 'Käynnissä' : 'Tulossa');
       tr.append(state);
       resultsBody.append(tr);
     }
@@ -377,10 +373,7 @@
   resultFilter.addEventListener('change', renderGames);
   document.querySelector('#tab-standings').addEventListener('click', () => showView('standings'));
   document.querySelector('#tab-results').addEventListener('click', () => showView('results'));
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
-    renderStandings();
-    if (resultsLoaded) renderGames();
-  });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', renderStandings);
   loadStandings();
 })();
 </script>
