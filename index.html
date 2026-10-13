@@ -1,429 +1,1196 @@
 <!doctype html>
-<html lang="fi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#f5f6f8">
-  <title>Liigan sarjataulukko </title>
+  <title>Liiga — Standings & Games</title>
   <style>
     :root {
       color-scheme: light dark;
-      --bg: #f5f6f8; --surface: #fff; --text: #17191d; --muted: #626976;
-      --line: #e0e3e8; --hover: #f0f3f7; --accent: #1459a6;
-      --header: #edf0f4; --shadow: 0 1px 4px rgb(0 0 0 / 6%);
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --surface-2: #eef1f5;
+      --text: #17202a;
+      --muted: #687281;
+      --border: #d9dee6;
+      --accent: #005bbb;
+      --accent-contrast: #ffffff;
+      --positive: #08783e;
+      --negative: #bc2b36;
+      --shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+      --focus: #ffb800;
     }
+
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #101216; --surface: #191c22; --text: #f0f2f5; --muted: #a5adba;
-        --line: #303640; --hover: #242a33; --accent: #8abaff;
-        --header: #20252d; --shadow: 0 1px 4px rgb(0 0 0 / 20%);
+        --bg: #0e1116;
+        --surface: #171b22;
+        --surface-2: #202631;
+        --text: #f2f5f8;
+        --muted: #a9b2c0;
+        --border: #313947;
+        --accent: #67b0ff;
+        --accent-contrast: #07121e;
+        --positive: #61d493;
+        --negative: #ff818b;
+        --shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+        --focus: #ffd24a;
       }
     }
+
     * { box-sizing: border-box; }
+
+    html { min-width: 320px; scroll-behavior: smooth; }
+
     body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      line-height: 1.45;
     }
-    main { max-width: 1100px; margin: 0 auto; padding: 22px 14px 36px; }
-    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-    h1 { font-size: clamp(1.25rem, 4vw, 1.8rem); line-height: 1.2; margin: 0; letter-spacing: -.025em; }
-    .subtitle { color: var(--muted); margin: 6px 0 0; font-size: .9rem; }
+
     button { font: inherit; }
-    #refresh {
-      flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px;
-      background: var(--surface); color: var(--text); padding: 9px 12px;
-      cursor: pointer; box-shadow: var(--shadow);
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
     }
-    #refresh:disabled { opacity: .55; cursor: wait; }
-    .tabs { display: flex; gap: 8px; margin: 0 0 14px; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .site-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 3px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .playoff-line td{
+      border-top:3px solid #4caf50 !important;
+    }
+
+    .preplayoff-line td{
+      border-top:3px solid #2196f3 !important;
+    }
+
+    .playout-line td{
+      border-top:3px solid #ff9800 !important;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.85rem, 4vw, 3rem);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .season {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .refresh-button,
+    .more-button,
+    .retry-button {
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 9px 16px;
+      cursor: pointer;
+      font-weight: 750;
+      transition: transform 120ms ease, background-color 120ms ease;
+    }
+
+    .refresh-button:hover,
+    .more-button:hover,
+    .retry-button:hover {
+      background: var(--surface-2);
+      transform: translateY(-1px);
+    }
+
+    .refresh-button:disabled { cursor: wait; opacity: 0.65; transform: none; }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      padding: 6px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
     .tab {
-      border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px;
-      background: var(--surface); color: var(--text); cursor: pointer; font: inherit;
+      min-height: 46px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 800;
     }
-    .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .result-tools { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
-    .result-tools label { color: var(--muted); font-size: .88rem; }
-    .result-tools select {
-      font: inherit; color: var(--text); background: var(--surface);
-      border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+
+    .tab[aria-selected="true"] {
+      background: var(--accent);
+      color: var(--accent-contrast);
     }
-    .game-table { min-width: 570px; }
-    .game-table th, .game-table td { text-align: left; }
-    .game-table td.date { color: var(--muted); font-size: .88rem; }
-    .game-table td.score { text-align: center; font-weight: 750; }
-    .game-table td.team-name { min-width: 130px; }
-    .game-table tr.upcoming td.score { color: var(--muted); font-weight: 500; }
-    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
-    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 690px; font-variant-numeric: tabular-nums; }
-    thead th { position: sticky; top: 0; background: var(--header); z-index: 1; }
-    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
-    th { font-size: .78rem; color: var(--muted); font-weight: 650; }
-    th:first-child, td:first-child { text-align: center; width: 54px; }
-    th.team, td.team { text-align: left; }
-    th.team { min-width: 165px; }
-    th button {
-      border: 0; background: transparent; color: inherit; padding: 3px 0;
-      cursor: pointer; font: inherit; white-space: nowrap;
+
+    .panel[hidden] { display: none; }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
     }
-    th button:focus-visible, #refresh:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-    th button[aria-sort="ascending"], th button[aria-sort="descending"] { color: var(--accent); }
-    .sort-icon { display: inline-block; width: 1em; margin-left: 3px; }
+
+    .panel-header,
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-header { margin: 0 0 13px; }
+    .section-header { margin-bottom: 10px; }
+
+    h2, h3 { margin: 0; letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.25rem, 2vw, 1.65rem); }
+    h3 { font-size: 1.08rem; }
+
+    .meta,
+    .empty,
+    .loading-message {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .loading-message,
+    .empty,
+    .error-box {
+      margin: 0;
+      padding: 28px 18px;
+      text-align: center;
+    }
+
+    .error-box {
+      border: 1px solid color-mix(in srgb, var(--negative) 40%, var(--border));
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--negative) 8%, var(--surface));
+      color: var(--text);
+    }
+
+    .error-box strong { display: block; margin-bottom: 6px; color: var(--negative); }
+    .error-box p { margin: 0 0 14px; color: var(--muted); }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 13px 12px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    th:first-child,
+    td:first-child { width: 54px; text-align: center; }
+
+    th:nth-child(2),
+    td:nth-child(2) { text-align: left; }
+
     tbody tr:last-child td { border-bottom: 0; }
-    tbody tr:hover { background: var(--hover); }
-    .rank { font-weight: 750; }
-    .team-cell { display: flex; align-items: center; gap: 9px; font-weight: 650; }
-    .logo { width: 30px; height: 30px; object-fit: contain; flex: 0 0 30px; }
-    .status { color: var(--muted); font-size: .85rem; padding: 12px 14px; }
-    .status.error { color: #d84b4b; }
-    .footer { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .78rem; padding: 10px 14px; border-top: 1px solid var(--line); }
-    @media (max-width: 520px) {
-      main { padding: 16px 8px 24px; }
-      .top { align-items: flex-start; }
-      #refresh { padding: 8px 10px; }
-      th, td { padding: 11px 8px; }
-      .footer { font-size: .74rem; }
+    tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+    .team-cell {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 170px;
+      font-weight: 780;
+    }
+
+    .team-logo,
+    .game-logo {
+      flex: 0 0 auto;
+      object-fit: contain;
+      background: transparent;
+    }
+
+    .team-logo { width: 34px; height: 34px; }
+    .game-logo { width: 42px; height: 42px; }
+
+    .logo-placeholder {
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    .team-logo.logo-placeholder { width: 34px; height: 34px; font-size: 0.7rem; }
+    .game-logo.logo-placeholder { width: 42px; height: 42px; font-size: 0.76rem; }
+
+    .position {
+      display: inline-grid;
+      min-width: 30px;
+      min-height: 30px;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--surface-2);
+      font-weight: 850;
+    }
+
+    .points { color: var(--accent); font-size: 1.05rem; font-weight: 900; }
+
+    .games-layout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .game-section { min-width: 0; }
+
+    .game-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .game-card {
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: var(--surface);
+      padding: 14px;
+      box-shadow: 0 5px 16px color-mix(in srgb, var(--text) 7%, transparent);
+    }
+
+    .game-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 11px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .status-badge {
+      border-radius: 999px;
+      background: var(--surface-2);
+      padding: 3px 8px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .status-badge.live {
+      background: color-mix(in srgb, var(--negative) 14%, var(--surface));
+      color: var(--negative);
+    }
+
+    .matchup {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .game-team {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .game-team.away { flex-direction: row-reverse; text-align: right; }
+    .game-team span { overflow: hidden; text-overflow: ellipsis; }
+
+    .score {
+      min-width: 72px;
+      text-align: center;
+      font-size: 1.28rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .versus { color: var(--muted); font-size: 0.88rem; font-weight: 800; }
+
+    .more-button {
+      width: 100%;
+      margin-top: 11px;
+      border-radius: 12px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .footer p { margin: 0; }
+
+    @media (max-width: 800px) {
+      .games-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .shell {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      .site-header { align-items: center; }
+      .refresh-button { min-width: 46px; padding-inline: 12px; }
+      .refresh-label { display: none; }
+      .table-wrap { overflow: visible; }
+      table, tbody { display: block; min-width: 0; }
+      thead { display: none; }
+
+      tbody {
+        display: grid;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      tbody tr {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr) repeat(4, minmax(44px, auto));
+        gap: 7px;
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 11px;
+      }
+
+      tbody tr:hover { background: transparent; }
+
+      td {
+        display: grid;
+        gap: 2px;
+        border: 0;
+        padding: 0;
+        text-align: center;
+        white-space: normal;
+      }
+
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-size: 0.62rem;
+        font-weight: 850;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      td:first-child { grid-column: 1; grid-row: 1; width: auto; }
+      td:first-child::before,
+      td:nth-child(2)::before { display: none; }
+
+      td:nth-child(2) {
+        grid-column: 2 / -1;
+        grid-row: 1;
+        text-align: left;
+      }
+
+      td:nth-child(n + 3) {
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+
+      td:nth-child(3) { grid-column: 1 / 3; }
+      td:nth-child(4) { grid-column: 3 / 5; }
+      td:nth-child(5) { grid-column: 5 / 7; }
+      td:nth-child(6) { grid-column: 1 / 2; }
+      td:nth-child(7) { grid-column: 2 / 3; }
+      td:nth-child(8) { grid-column: 3 / 4; }
+      td:nth-child(9) { grid-column: 4 / 5; }
+      td:nth-child(10) { grid-column: 5 / 7; }
+
+      .footer { flex-direction: column; }
+    }
+
+    @media (max-width: 420px) {
+      .game-card { padding: 12px 10px; }
+      .matchup { grid-template-columns: minmax(0, 1fr) 62px minmax(0, 1fr); gap: 5px; }
+      .game-team { flex-direction: column; gap: 4px; text-align: center; font-size: 0.8rem; }
+      .game-team.away { flex-direction: column; text-align: center; }
+      .game-logo { width: 36px; height: 36px; }
+      .score { min-width: 62px; font-size: 1.12rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
-<main>
-  <header class="top">
-    <div>
-      <h1>Liigan sarjataulukko</h1>
-      <p class="subtitle">Kausi 2026–2027 · Runkosarja</p>
-    </div>
-    <button id="refresh" type="button">↻ Päivitä</button>
-  </header>
-  <nav class="tabs" aria-label="Näkymä">
-    <button class="tab" id="tab-standings" type="button" aria-selected="true">Sarjataulukko</button>
-    <button class="tab" id="tab-results" type="button" aria-selected="false">Ottelut</button>
-  </nav>
+  <main class="shell">
+    <header class="site-header">
+      <div>
 
-  <section class="panel" id="standings-panel" aria-label="Liigan sarjataulukko">
-    <div id="status" class="status" role="status">Haetaan sarjataulukkoa…</div>
-    <div class="table-scroll">
-      <table id="standings" hidden>
-        <thead><tr>
-          <th scope="col"><button data-key="ranking" aria-sort="ascending">Sij.<span class="sort-icon">↑</span></button></th>
-          <th scope="col" class="team">Joukkue</th>
-          <th scope="col"><button data-key="points">Pisteet<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="winPercentage">Voitto-%<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="games">Ottelut<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="wins">V<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="losses">T<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="overtimeWins">JAV<span class="sort-icon">↕</span></button></th>
-          <th scope="col"><button data-key="overtimeLosses">JAT<span class="sort-icon">↕</span></button></th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="footer"><span id="count">—</span><span id="updated">—</span></div>
-  </section>
+        <h1>Liiga</h1>
+        <p class="season" id="season-label">Loading season…</p>
+      </div>
+      <button class="refresh-button" id="refresh-button" type="button" aria-label="Refresh data">
+        <span aria-hidden="true">↻</span> <span class="refresh-label">Refresh</span>
+      </button>
+    </header>
 
-  <section class="panel" id="results-panel" aria-label="Liigan ottelut" hidden>
-    <div class="result-tools">
-      <label for="result-filter">Näytä</label>
-      <select id="result-filter">
-        <option value="played">Pelatut ottelut</option>
-        <option value="upcoming">Tulevat ottelut</option>
-        <option value="all">Kaikki ottelut</option>
-      </select>
-      <button id="refresh-results" type="button">↻ Päivitä</button>
-    </div>
-    <div id="results-status" class="status" role="status">Haetaan otteluita…</div>
-    <div class="table-scroll">
-      <table id="results-table" class="game-table" hidden>
-        <thead><tr><th scope="col">Päivä</th><th scope="col">Koti</th><th scope="col">Tulos</th><th scope="col">Vieras</th><th scope="col">Tila</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="footer"><span id="results-count">—</span><span id="results-updated">—</span></div>
-  </section>
-  <p class="subtitle" id="standings-help">V = voitot · T = tappiot · JAV = jatkoaikavoitot · JAT = jatkoaikatappiot. Lajittele napauttamalla sarakeotsikkoa.</p>
-  <p class="subtitle" id="results-help" hidden>Ottelutiedot haetaan Liigan julkisesta API:sta. Pelatut ottelut näytetään uusimmasta vanhimpaan.</p>
-</main>
-<script>
-(() => {
-  const API_BASE = 'https://www.liiga.fi/api/v2';
-  const SEASON = 2027;
-  const STANDINGS_URL = `${API_BASE}/standings?season=${SEASON}`;
-  // Liigan games-endpoint accepts tournament=runkosarja and season=YYYY.
-  const GAMES_URL = `${API_BASE}/games?tournament=runkosarja&season=${SEASON}`;
-  const FINISHED_TYPE_LABELS = {
-    ENDED_DURING_REGULAR_GAME_TIME: 'Päättyi varsinaisella peliajalla',
-    ENDED_DURING_EXTENDED_GAME_TIME: 'Päättyi jatkoajalla',
-    ENDED_DURING_WINNING_SHOT_COMPETITION: 'Päättyi voittolaukauksilla'
-  };
+    <nav class="tabs" role="tablist" aria-label="Liiga information">
+      <button class="tab" id="standings-tab" role="tab" type="button"
+        aria-selected="true" aria-controls="standings-panel">Standings</button>
+      <button class="tab" id="games-tab" role="tab" type="button"
+        aria-selected="false" aria-controls="games-panel" tabindex="-1">Games</button>
+    </nav>
 
-  const table = document.querySelector('#standings');
-  const tbody = table.querySelector('tbody');
-  const status = document.querySelector('#status');
-  const refresh = document.querySelector('#refresh');
-  const count = document.querySelector('#count');
-  const updated = document.querySelector('#updated');
-  const resultsPanel = document.querySelector('#results-panel');
-  const standingsPanel = document.querySelector('#standings-panel');
-  const resultsStatus = document.querySelector('#results-status');
-  const resultsTable = document.querySelector('#results-table');
-  const resultsBody = resultsTable.querySelector('tbody');
-  const resultsCount = document.querySelector('#results-count');
-  const resultsUpdated = document.querySelector('#results-updated');
-  const resultFilter = document.querySelector('#result-filter');
-  const refreshResults = document.querySelector('#refresh-results');
-  const fmtPct = new Intl.NumberFormat('fi-FI', { style: 'percent', maximumFractionDigits: 1 });
-  const fmtDate = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' });
-  const fmtDateTime = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
-  let teams = [];
-  let games = [];
-  let sortKey = 'ranking';
-  let sortDirection = 1;
-  let resultsLoaded = false;
+    <section class="panel" id="standings-panel" role="tabpanel" aria-labelledby="standings-tab">
+      <div class="panel-header">
+        <h2>Current standings</h2>
+        <span class="meta" id="standings-count"></span>
+      </div>
+      <div class="card" id="standings-content" aria-live="polite">
+        <p class="loading-message">Loading standings…</p>
+      </div>
+    </section>
 
-  function logoUrl(team) {
-    const logos = team.teamLogos || {};
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return (dark ? logos.darkBg : logos.lightBg) || logos.lightBg || logos.darkBg || '';
-  }
+    <section class="panel" id="games-panel" role="tabpanel" aria-labelledby="games-tab" hidden>
+      <div class="panel-header">
+        <h2>Games</h2>
+        <span class="meta" id="games-count"></span>
+      </div>
+      <div class="games-layout">
+        <section class="game-section" aria-labelledby="upcoming-heading">
+          <div class="section-header">
+            <h3 id="upcoming-heading">Upcoming</h3>
+            <span class="meta" id="upcoming-count"></span>
+          </div>
+          <div class="game-list" id="upcoming-list" aria-live="polite">
+            <p class="card loading-message">Loading games…</p>
+          </div>
+          <button class="more-button" id="more-upcoming" type="button" hidden>Show all upcoming games</button>
+        </section>
 
-  function gameTeamLogoUrl(gameTeam) {
-    if (!gameTeam) return '';
-    const directLogo = logoUrl(gameTeam);
-    if (directLogo) return directLogo;
+        <section class="game-section" aria-labelledby="played-heading">
+          <div class="section-header">
+            <h3 id="played-heading">Played</h3>
+            <span class="meta" id="played-count"></span>
+          </div>
+          <div class="game-list" id="played-list" aria-live="polite">
+            <p class="card loading-message">Loading games…</p>
+          </div>
+          <button class="more-button" id="more-played" type="button" hidden>Show all played games</button>
+        </section>
+      </div>
+    </section>
 
-    const gameTeamId = gameTeam.teamId ?? gameTeam.id;
-    const standingsTeam = teams.find(team => {
-      const standingsTeamId = team.teamId ?? team.id;
-      const sameId = gameTeamId != null && standingsTeamId != null
-        && String(gameTeamId) === String(standingsTeamId);
-      return sameId || team.teamName === gameTeam.teamName;
-    });
-    return standingsTeam ? logoUrl(standingsTeam) : '';
-  }
+    <footer class="footer">
 
-  function fillGameTeamCell(cell, gameTeam) {
-    const wrap = document.createElement('div');
-    wrap.className = 'team-cell';
-    const src = gameTeamLogoUrl(gameTeam);
-    if (src) {
-      const img = document.createElement('img');
-      img.className = 'logo';
-      img.src = src;
-      img.alt = '';
-      img.loading = 'lazy';
-      img.onerror = () => img.remove();
-      wrap.append(img);
+      <p id="updated-at">Not updated yet</p>
+    </footer>
+  </main>
+
+  <script>
+    'use strict';
+
+    /*
+      Liiga identifies a season by its ending year: 2026–27 => 2027.
+      API schemas are undocumented, so the normalizers accept common field aliases
+      and nested response wrappers instead of depending on one exact JSON shape.
+    */
+    const API_BASE = 'https://liiga.fi/api/v2';
+    const INITIAL_GAME_LIMIT = 12;
+
+    const state = {
+      season: getSeasonEndYear(new Date()),
+      standings: [],
+      upcoming: [],
+      played: [],
+      showAllUpcoming: false,
+      showAllPlayed: false
+    };
+
+    const els = {
+      seasonLabel: document.getElementById('season-label'),
+      refresh: document.getElementById('refresh-button'),
+      standingsContent: document.getElementById('standings-content'),
+      standingsCount: document.getElementById('standings-count'),
+      gamesCount: document.getElementById('games-count'),
+      upcomingList: document.getElementById('upcoming-list'),
+      playedList: document.getElementById('played-list'),
+      upcomingCount: document.getElementById('upcoming-count'),
+      playedCount: document.getElementById('played-count'),
+      moreUpcoming: document.getElementById('more-upcoming'),
+      morePlayed: document.getElementById('more-played'),
+      updatedAt: document.getElementById('updated-at')
+    };
+
+    const standingsEndpoints = season => [
+      `${API_BASE}/standings?season=${season}`
+    ];
+
+    const gamesEndpoints = season => [
+      `${API_BASE}/games?tournament=all&season=${season}`,
+      `${API_BASE}/games?tournament=all`,
+      `${API_BASE}/games?tournament=runkosarja&season=${season}`,
+      `${API_BASE}/games?tournament=runkosarja`
+    ];
+
+    function getSeasonEndYear(date) {
+      return date.getMonth() >= 8 ? date.getFullYear() + 1 : date.getFullYear();
     }
-    const name = document.createElement('span');
-    name.textContent = gameTeam?.teamName || '—';
-    wrap.append(name);
-    cell.append(wrap);
-  }
 
-  function gameStatusText(game) {
-    if (!isPlayed(game)) return game.started ? 'Käynnissä' : 'Tulossa';
-    return FINISHED_TYPE_LABELS[game.finishedType] || game.finishedType || 'Päättynyt';
-  }
+    function seasonText(endYear) {
+      return `${endYear - 1}–${String(endYear).slice(-2)} `;
+    }
 
-  function renderStandings() {
-    const sorted = [...teams].sort((a, b) => {
-      const av = Number(a[sortKey] ?? 0);
-      const bv = Number(b[sortKey] ?? 0);
-      return (av - bv) * sortDirection || String(a.teamName).localeCompare(String(b.teamName), 'fi');
-    });
-    tbody.replaceChildren();
-    for (const team of sorted) {
-      const tr = document.createElement('tr');
-      const rank = document.createElement('td');
-      rank.className = 'rank';
-      rank.textContent = team.ranking;
-      tr.append(rank);
+    function firstDefined(...values) {
+      return values.find(value => value !== undefined && value !== null && value !== '');
+    }
 
-      const nameCell = document.createElement('td');
-      nameCell.className = 'team';
-      const wrap = document.createElement('div');
-      wrap.className = 'team-cell';
-      const src = logoUrl(team);
-      if (src) {
-        const img = document.createElement('img');
-        img.className = 'logo';
-        img.src = src;
-        img.alt = '';
-        img.loading = 'lazy';
-        img.onerror = () => img.remove();
-        wrap.append(img);
+    function numberValue(...values) {
+      const value = firstDefined(...values);
+      if (value === undefined) return 0;
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      const parsed = Number(String(value).replace(',', '.').replace(/[^0-9.+-]/g, ''));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function textValue(...values) {
+      const value = firstDefined(...values);
+      return value === undefined ? '' : String(value).trim();
+    }
+
+    function normalizeUrl(value) {
+      if (typeof value !== 'string' || !value.trim()) return '';
+      const candidate = value.trim();
+      try {
+        const url = new URL(candidate, 'https://liiga.fi');
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+      } catch {
+        return '';
       }
-      const name = document.createElement('span');
-      name.textContent = team.teamName;
-      wrap.append(name);
-      nameCell.append(wrap);
-      tr.append(nameCell);
+    }
 
-      const values = [
-        team.points ?? '—',
-        fmtPct.format(Number(team.winPercentage || 0)),
-        team.games ?? '—',
-        team.wins ?? '—',
-        team.losses ?? '—',
-        team.overtimeWins ?? '—',
-        team.overtimeLosses ?? '—'
+    function deepFindImage(root) {
+      const seen = new WeakSet();
+      let fallback = '';
+
+      function walk(value, depth) {
+        if (!value || depth > 5 || typeof value !== 'object') return '';
+        if (seen.has(value)) return '';
+        seen.add(value);
+
+        for (const [key, child] of Object.entries(value)) {
+          if (typeof child === 'string') {
+            const url = normalizeUrl(child);
+            if (!url) continue;
+            if (/logo|crest|badge|emblem/i.test(key)) return url;
+            if (!fallback && /image|picture|icon|url/i.test(key)) fallback = url;
+          }
+        }
+
+        for (const child of Object.values(value)) {
+          const found = walk(child, depth + 1);
+          if (found) return found;
+        }
+        return '';
+      }
+
+      return walk(root, 0) || fallback;
+    }
+
+    function teamName(team, row = {}) {
+      return textValue(
+        team?.name,
+        team?.teamName,
+        team?.displayName,
+        team?.shortName,
+        row.teamName,
+        row.name,
+        row.displayName,
+        row.abbreviation,
+        'Unknown team'
+      );
+    }
+
+    function teamLogo(team, row = {}) {
+      const logos = firstDefined(team?.logos, team?.teamLogos, row.logos, row.teamLogos, {}) || {};
+      const fallback = normalizeUrl(firstDefined(
+        team?.logo,
+        team?.logoUrl,
+        team?.logoURL,
+        team?.image,
+        team?.imageUrl,
+        team?.images?.logo,
+        row.logo,
+        row.logoUrl,
+        row.image,
+        row.imageUrl
+      )) || deepFindImage(team) || deepFindImage(row);
+
+      const light = normalizeUrl(firstDefined(
+        logos.lightBg, logos.lightBackground, logos.light, logos.default, fallback
+      ));
+      const dark = normalizeUrl(firstDefined(
+        logos.darkBg, logos.darkBackground, logos.dark, light, fallback
+      ));
+
+      return { light: light || dark, dark: dark || light };
+    }
+
+    function collectArrays(root) {
+      const arrays = [];
+      const seen = new WeakSet();
+
+      function walk(value, depth) {
+        if (!value || depth > 8 || typeof value !== 'object') return;
+        if (seen.has(value)) return;
+        seen.add(value);
+        if (Array.isArray(value)) arrays.push(value);
+        for (const child of Object.values(value)) walk(child, depth + 1);
+      }
+
+      walk(root, 0);
+      return arrays;
+    }
+
+    function looksLikeStanding(row) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) return false;
+      const keys = Object.keys(row).join(' ').toLowerCase();
+      const hasTeam = Boolean(row.team || row.teamName || row.name || row.club);
+      const hasStat = /point|game|match|win|loss|position|rank/.test(keys);
+      return hasTeam && hasStat;
+    }
+
+    function normalizeStanding(row, index) {
+      const team = firstDefined(row.team, row.club, row.teamInfo, row.teamData, {}) || {};
+      const games = numberValue(row.liveGames, row.games, row.gamesPlayed, row.played, row.matches, row.gp, row.GP);
+      const wins = numberValue(row.liveWins, row.wins, row.win, row.victories, row.won, row.W);
+      const losses = numberValue(row.liveLosses, row.losses, row.loss, row.lost, row.regularLosses, row.L);
+      const overtimeWins = numberValue(
+        row.overtimeWins, row.otWins, row.winsOvertime, row.extendedWins,
+        row.winningShotCompetitionWins, row.OW, row.OTW
+      );
+      const overtimeLosses = numberValue(
+        row.overtimeLosses, row.otLosses, row.lossesOvertime, row.extendedLosses,
+        row.winningShotCompetitionLosses, row.OL, row.OTL
+      );
+      const points = numberValue(row.livePoints, row.points, row.point, row.pts, row.P);
+      const suppliedPct = firstDefined(
+        row.winPercentage, row.winningPercentage, row.winPct, row.winsPercentage, row.percentage
+      );
+      const calculatedPct = games > 0 ? (wins / games) * 100 : 0;
+      const rawPct = suppliedPct === undefined ? calculatedPct : numberValue(suppliedPct);
+      const winPercentage = suppliedPct !== undefined && rawPct <= 1 ? rawPct * 100 : rawPct;
+
+      return {
+        id: textValue(team.id, team.teamId, row.teamId, row.internalId, row.id, teamName(team, row)),
+        position: numberValue(row.liveRanking, row.ranking, row.position, row.rank, row.place, row.standing, index + 1),
+        name: teamName(team, row),
+        logo: teamLogo(team, row),
+        games,
+        points,
+        winPercentage,
+        wins,
+        losses,
+        overtimeWins,
+        overtimeLosses
+      };
+    }
+
+    function extractStandings(payload) {
+      const candidates = collectArrays(payload)
+        .filter(array => array.length && array.filter(looksLikeStanding).length >= Math.min(2, array.length))
+        .sort((a, b) => b.filter(looksLikeStanding).length - a.filter(looksLikeStanding).length);
+
+      // The supplied response groups tables by competition. "season" is the
+      // current regular-season table; "valmistavat_ottelut" is preseason.
+      const source = Array.isArray(payload?.season)
+        ? payload.season
+        : (candidates[0] || (Array.isArray(payload) ? payload : []));
+      const unique = new Map();
+
+      source
+        .filter(looksLikeStanding)
+        .filter(row => !row.serie || String(row.serie).toUpperCase() === 'RUNKOSARJA')
+        .forEach((row, index) => {
+          const item = normalizeStanding(row, index);
+          if (!unique.has(item.id)) unique.set(item.id, item);
+        });
+
+      return [...unique.values()].sort((a, b) =>
+        (a.position || Number.MAX_SAFE_INTEGER) - (b.position || Number.MAX_SAFE_INTEGER) ||
+        b.points - a.points
+      );
+    }
+
+    function looksLikeGame(value) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      return Boolean(
+        (value.homeTeam || value.home || value.homeClub) &&
+        (value.awayTeam || value.away || value.visitorTeam || value.awayClub) &&
+        (value.id !== undefined || value.gameId !== undefined || value.start || value.startTime)
+      );
+    }
+
+    function extractGames(payload) {
+      const games = [];
+      const seenObjects = new WeakSet();
+
+      function walk(value, depth) {
+        if (!value || depth > 9 || typeof value !== 'object') return;
+        if (seenObjects.has(value)) return;
+        seenObjects.add(value);
+        if (looksLikeGame(value)) games.push(value);
+        for (const child of Object.values(value)) walk(child, depth + 1);
+      }
+
+      walk(payload, 0);
+      const unique = new Map();
+      games.map(normalizeGame).forEach(game => {
+        const key = game.id || `${game.start?.toISOString()}-${game.home.name}-${game.away.name}`;
+        if (!unique.has(key)) unique.set(key, game);
+      });
+      return [...unique.values()];
+    }
+
+    function parseDate(value) {
+      if (value === undefined || value === null || value === '') return null;
+      if (typeof value === 'number') {
+        const milliseconds = value < 1e12 ? value * 1000 : value;
+        const date = new Date(milliseconds);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+      const date = new Date(String(value));
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function normalizeGame(raw) {
+      const homeRaw = firstDefined(raw.homeTeam, raw.home, raw.homeClub, {}) || {};
+      const awayRaw = firstDefined(raw.awayTeam, raw.away, raw.visitorTeam, raw.awayClub, {}) || {};
+      const result = firstDefined(raw.result, raw.score, {}) || {};
+      const start = parseDate(firstDefined(
+        raw.start, raw.startTime, raw.date, raw.gameDate, raw.scheduledStart, raw.startDate,
+        homeRaw.gameStartDateTime
+      ));
+      const homeScoreRaw = firstDefined(
+        homeRaw.goals, homeRaw.score, homeRaw.result,
+        result.home, result.homeGoals, result.homeScore,
+        raw.homeGoals, raw.homeScore
+      );
+      const awayScoreRaw = firstDefined(
+        awayRaw.goals, awayRaw.score, awayRaw.result,
+        result.away, result.awayGoals, result.awayScore,
+        raw.awayGoals, raw.awayScore
+      );
+      const status = textValue(
+        raw.finishedType, raw.status, raw.gameStatus, raw.state, raw.phase,
+        raw.endType, raw.resultType, raw.gameState?.status,
+        raw.gameState?.gameStatus, raw.gameState?.detailedGameStatus
+      );
+      const upperStatus = status.toUpperCase();
+      const finished = raw.ended === true || raw.finished === true ||
+        upperStatus.startsWith('ENDED_') || /FINISHED|FINAL|COMPLETED/.test(upperStatus);
+      const live = !finished && raw.started === true;
+
+      return {
+        id: textValue(raw.id, raw.gameId, raw.matchId),
+        start,
+        status,
+        serie: textValue(raw.serie).toUpperCase(),
+        started: raw.started === true,
+        finished,
+        live,
+        homeScore: homeScoreRaw === undefined ? null : numberValue(homeScoreRaw),
+        awayScore: awayScoreRaw === undefined ? null : numberValue(awayScoreRaw),
+        home: {
+          name: teamName(homeRaw),
+          logo: teamLogo(homeRaw),
+          id: textValue(homeRaw.id, homeRaw.teamId)
+        },
+        away: {
+          name: teamName(awayRaw),
+          logo: teamLogo(awayRaw),
+          id: textValue(awayRaw.id, awayRaw.teamId)
+        }
+      };
+    }
+
+    async function fetchJsonWithFallback(urls, validator) {
+      const failures = [];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          if (!validator(data)) throw new Error('Response did not contain expected records');
+          return data;
+        } catch (error) {
+          failures.push(`${url}: ${error.message}`);
+        }
+      }
+      throw new Error(failures.join(' | '));
+    }
+
+    function el(tag, options = {}, children = []) {
+      const node = document.createElement(tag);
+      if (options.className) node.className = options.className;
+      if (options.text !== undefined) node.textContent = options.text;
+      if (options.attrs) {
+        for (const [name, value] of Object.entries(options.attrs)) node.setAttribute(name, value);
+      }
+      for (const child of children) node.append(child);
+      return node;
+    }
+
+    function logoNode(logos, name, className) {
+      const light = typeof logos === 'string' ? logos : logos?.light;
+      const dark = typeof logos === 'string' ? logos : logos?.dark;
+      const fallback = light || dark;
+      if (!fallback) {
+        return el('span', {
+          className: `${className} logo-placeholder`,
+          text: name.split(/\s+/).map(part => part[0]).join('').slice(0, 3).toUpperCase(),
+          attrs: { 'aria-hidden': 'true' }
+        });
+      }
+
+      const picture = el('picture');
+      if (dark) {
+        picture.append(el('source', {
+          attrs: { media: '(prefers-color-scheme: dark)', srcset: dark }
+        }));
+      }
+      const image = el('img', {
+        className,
+        attrs: { src: fallback, alt: `${name} logo`, loading: 'lazy', decoding: 'async' }
+      });
+      image.addEventListener('error', () => {
+        picture.replaceWith(logoNode(null, name, className));
+      }, { once: true });
+      picture.append(image);
+      return picture;
+    }
+
+    function renderStandings() {
+      els.standingsContent.replaceChildren();
+      els.standingsCount.textContent = `${state.standings.length} teams`;
+
+      if (!state.standings.length) {
+        els.standingsContent.append(el('p', { className: 'empty', text: 'No standings were returned.' }));
+        return;
+      }
+
+      const headers = [
+        ['Pos', 'Position'],
+        ['Team', 'Team'],
+        ['GP', 'Games'],
+        ['Pts', 'Points'],
+        ['Win %', 'Win percentage'],
+        ['W', 'Wins'],
+        ['L', 'Losses'],
+        ['OTW', 'Overtime wins'],
+        ['OTL', 'Overtime losses']
       ];
-      for (const value of values) {
-        const td = document.createElement('td');
-        td.textContent = value;
-        tr.append(td);
+      const table = el('table');
+      const thead = el('thead');
+      const headerRow = el('tr');
+      headers.forEach(([short, full]) => headerRow.append(el('th', { text: short, attrs: { title: full, scope: 'col' } })));
+      thead.append(headerRow);
+
+      const tbody = el('tbody');
+      state.standings.forEach(team => {
+        const row = el('tr');
+
+        if (team.position === 5) {
+          row.classList.add('playoff-line');
+        }
+
+        if (team.position === 13) {
+          row.classList.add('preplayoff-line');
+        }
+
+        if (team.position === 16) {
+          row.classList.add('playout-line');
+        }
+
+        const positionCell = el('td', { attrs: { 'data-label': 'Position' } }, [
+          el('span', { className: 'position', text: String(team.position) })
+        ]);
+        const nameCell = el('td', { attrs: { 'data-label': 'Team' } }, [
+          el('div', { className: 'team-cell' }, [
+            logoNode(team.logo, team.name, 'team-logo'),
+            el('span', { text: team.name })
+          ])
+        ]);
+        const values = [
+          [team.games, 'Games', ''],
+          [team.points, 'Points', 'points'],
+          [`${formatNumber(team.winPercentage, 1)}%`, 'Win %', ''],
+          [team.wins, 'Wins', ''],
+          [team.losses, 'Losses', ''],
+          [team.overtimeWins, 'OT wins', ''],
+          [team.overtimeLosses, 'OT losses', '']
+        ];
+        row.append(positionCell, nameCell);
+        values.forEach(([value, label, className]) => row.append(el('td', {
+          className,
+          text: String(value),
+          attrs: { 'data-label': label }
+        })));
+        tbody.append(row);
+      });
+
+      table.append(thead, tbody);
+      els.standingsContent.append(el('div', { className: 'table-wrap' }, [table]));
+    }
+
+    function formatNumber(value, decimals) {
+      return new Intl.NumberFormat(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+      }).format(value);
+    }
+
+    function formatGameDate(date) {
+      if (!date) return 'Date unavailable';
+      return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+      }).format(date);
+    }
+
+    function readableStatus(game) {
+      if (game.live) return 'Live';
+      if (game.status === 'ENDED_DURING_EXTENDED_GAME_TIME') return 'Final · OT';
+      if (game.status === 'ENDED_DURING_WINNING_SHOT_COMPETITION') return 'Final · SO';
+      if (game.status === 'ENDED_DURING_REGULAR_GAME_TIME' || game.finished) return 'Final';
+      if (/POSTPONED/i.test(game.status)) return 'Postponed';
+      if (/CANCELLED|CANCELED/i.test(game.status)) return 'Cancelled';
+      return 'Scheduled';
+    }
+
+    function gameCard(game) {
+      const badge = el('span', {
+        className: `status-badge${game.live ? ' live' : ''}`,
+        text: readableStatus(game)
+      });
+      const home = el('div', { className: 'game-team home' }, [
+        logoNode(game.home.logo, game.home.name, 'game-logo'),
+        el('span', { text: game.home.name })
+      ]);
+      const away = el('div', { className: 'game-team away' }, [
+        logoNode(game.away.logo, game.away.name, 'game-logo'),
+        el('span', { text: game.away.name })
+      ]);
+      const hasScore = game.homeScore !== null && game.awayScore !== null;
+      const middle = el('div', {
+        className: hasScore ? 'score' : 'score versus',
+        text: hasScore ? `${game.homeScore} – ${game.awayScore}` : 'vs'
+      });
+
+      return el('article', { className: 'game-card' }, [
+        el('header', { className: 'game-card-header' }, [
+          el('time', {
+            text: formatGameDate(game.start),
+            attrs: game.start ? { datetime: game.start.toISOString() } : {}
+          }),
+          badge
+        ]),
+        el('div', { className: 'matchup' }, [home, middle, away])
+      ]);
+    }
+
+    function renderGameList(container, games, showAll, button, emptyMessage) {
+      container.replaceChildren();
+      if (!games.length) {
+        container.append(el('p', { className: 'card empty', text: emptyMessage }));
+        button.hidden = true;
+        return;
       }
-      tbody.append(tr);
+      const visible = showAll ? games : games.slice(0, INITIAL_GAME_LIMIT);
+      visible.forEach(game => container.append(gameCard(game)));
+      button.hidden = games.length <= INITIAL_GAME_LIMIT;
+      button.textContent = showAll ? 'Show fewer games' : `Show all ${games.length} games`;
     }
-    for (const button of table.querySelectorAll('thead button[data-key]')) {
-      const active = button.dataset.key === sortKey;
-      button.setAttribute('aria-sort', active ? (sortDirection === 1 ? 'ascending' : 'descending') : 'none');
-      button.querySelector('.sort-icon').textContent = active ? (sortDirection === 1 ? '↑' : '↓') : '↕';
+
+    function renderGames() {
+      els.gamesCount.textContent = `${state.upcoming.length + state.played.length} games`;
+      els.upcomingCount.textContent = String(state.upcoming.length);
+      els.playedCount.textContent = String(state.played.length);
+      renderGameList(
+        els.upcomingList, state.upcoming, state.showAllUpcoming, els.moreUpcoming,
+        'No upcoming games were returned.'
+      );
+      renderGameList(
+        els.playedList, state.played, state.showAllPlayed, els.morePlayed,
+        'No played games were returned.'
+      );
     }
-    count.textContent = `${teams.length} joukkuetta`;
-  }
 
-  async function loadStandings() {
-    refresh.disabled = true;
-    status.hidden = false;
-    status.classList.remove('error');
-    status.textContent = 'Haetaan sarjataulukkoa…';
-    try {
-      const response = await fetch(STANDINGS_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-      if (!response.ok) throw new Error(`API palautti HTTP ${response.status}`);
-      const data = await response.json();
-      if (!Array.isArray(data.season)) throw new Error('Vastauksen season-taulukkoa ei löytynyt.');
-      teams = data.season.filter(team => team.serie === 'RUNKOSARJA' && Number(team.ranking) > 0);
-      if (!teams.length) throw new Error('Runkosarjan joukkueita ei löytynyt vastauksesta.');
-      sortKey = 'ranking';
-      sortDirection = 1;
-      renderStandings();
-      if (resultsLoaded) renderGames();
-      table.hidden = false;
-      status.hidden = true;
-      updated.textContent = `Päivitetty ${new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`;
-    } catch (error) {
-      status.classList.add('error');
-      status.textContent = `Sarjataulukon lataus epäonnistui: ${error.message}. Tarkista verkkoyhteys tai API:n CORS-asetukset.`;
-    } finally {
-      refresh.disabled = false;
+    function renderError(container, heading, error) {
+      container.replaceChildren(el('div', { className: 'error-box' }, [
+        el('strong', { text: heading }),
+        el('p', { text: 'The Liiga API could not be read. This can be caused by an API change, a network problem, or browser CORS restrictions.' }),
+        el('button', { className: 'retry-button', text: 'Retry', attrs: { type: 'button' } })
+      ]));
+      container.querySelector('button').addEventListener('click', loadData);
+      console.error(heading, error);
     }
-  }
 
-  function parseGameDate(game) {
-    const value = game.start || game.startTime || game.date;
-    if (!value) return null;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-
-  function isPlayed(game) {
-    return Boolean(game.ended) && game.homeTeam?.goals != null && game.awayTeam?.goals != null;
-  }
-
-  function renderGames() {
-    const filter = resultFilter.value;
-    let filtered = games.filter(game => {
-      if (filter === 'played') return isPlayed(game);
-      if (filter === 'upcoming') return !isPlayed(game);
-      return true;
-    });
-    filtered.sort((a, b) => {
-      const ad = parseGameDate(a)?.getTime() ?? 0;
-      const bd = parseGameDate(b)?.getTime() ?? 0;
-      return filter === 'upcoming' ? ad - bd : bd - ad;
-    });
-
-    resultsBody.replaceChildren();
-    for (const game of filtered) {
-      const tr = document.createElement('tr');
-      if (!isPlayed(game)) tr.className = 'upcoming';
-      const date = parseGameDate(game);
-      const dateCell = document.createElement('td');
-      dateCell.className = 'date';
-      dateCell.textContent = date ? fmtDateTime.format(date) : '—';
-      tr.append(dateCell);
-
-      const home = document.createElement('td');
-      home.className = 'team-name';
-      fillGameTeamCell(home, game.homeTeam);
-      tr.append(home);
-
-      const score = document.createElement('td');
-      score.className = 'score';
-      score.textContent = isPlayed(game)
-        ? `${game.homeTeam.goals}–${game.awayTeam.goals}`
-        : '–';
-      tr.append(score);
-
-      const away = document.createElement('td');
-      away.className = 'team-name';
-      fillGameTeamCell(away, game.awayTeam);
-      tr.append(away);
-
-      const state = document.createElement('td');
-      state.textContent = gameStatusText(game);
-      tr.append(state);
-      resultsBody.append(tr);
+    function setLoading() {
+      els.standingsContent.replaceChildren(el('p', { className: 'loading-message', text: 'Loading standings…' }));
+      els.upcomingList.replaceChildren(el('p', { className: 'card loading-message', text: 'Loading games…' }));
+      els.playedList.replaceChildren(el('p', { className: 'card loading-message', text: 'Loading games…' }));
+      els.standingsCount.textContent = '';
+      els.gamesCount.textContent = '';
+      els.upcomingCount.textContent = '';
+      els.playedCount.textContent = '';
+      els.moreUpcoming.hidden = true;
+      els.morePlayed.hidden = true;
     }
-    resultsTable.hidden = false;
-    resultsStatus.hidden = true;
-    resultsCount.textContent = `${filtered.length} ottelua`;
-  }
 
-  async function loadGames() {
-    refreshResults.disabled = true;
-    resultsStatus.hidden = false;
-    resultsStatus.classList.remove('error');
-    resultsStatus.textContent = 'Haetaan otteluita…';
-    try {
-      const response = await fetch(GAMES_URL, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-      if (!response.ok) throw new Error(`API palautti HTTP ${response.status}`);
-      const payload = await response.json();
-      games = Array.isArray(payload) ? payload : (Array.isArray(payload.games) ? payload.games : []);
-      if (!games.length) throw new Error('Ottelulistaa ei löytynyt vastauksesta.');
-      resultsLoaded = true;
+    async function loadData() {
+      setLoading();
+      els.refresh.disabled = true;
+      state.showAllUpcoming = false;
+      state.showAllPlayed = false;
+
+      const standingsPromise = fetchJsonWithFallback(
+        standingsEndpoints(state.season), payload => extractStandings(payload).length > 0
+      );
+      const gamesPromise = fetchJsonWithFallback(
+        gamesEndpoints(state.season), payload => extractGames(payload).length > 0
+      );
+
+      const [standingsResult, gamesResult] = await Promise.allSettled([standingsPromise, gamesPromise]);
+
+      if (standingsResult.status === 'fulfilled') {
+        state.standings = extractStandings(standingsResult.value);
+        renderStandings();
+      } else {
+        state.standings = [];
+        renderError(els.standingsContent, 'Unable to load standings', standingsResult.reason);
+      }
+
+      if (gamesResult.status === 'fulfilled') {
+        const now = new Date();
+        const games = extractGames(gamesResult.value)
+          .filter(game => !game.serie || game.serie === 'RUNKOSARJA');
+        state.played = games
+          .filter(game => game.finished)
+          .sort((a, b) => (b.start?.getTime() || 0) - (a.start?.getTime() || 0));
+        state.upcoming = games
+          .filter(game => !game.finished && (game.live || !game.start || game.start.getTime() >= now.getTime()))
+          .sort((a, b) => (a.start?.getTime() || Number.MAX_SAFE_INTEGER) - (b.start?.getTime() || Number.MAX_SAFE_INTEGER));
+        renderGames();
+      } else {
+        state.upcoming = [];
+        state.played = [];
+        renderError(els.upcomingList, 'Unable to load games', gamesResult.reason);
+        els.playedList.replaceChildren(el('p', { className: 'card empty', text: 'Games are unavailable.' }));
+      }
+
+      if (standingsResult.status === 'fulfilled' || gamesResult.status === 'fulfilled') {
+        els.updatedAt.textContent = `Updated ${new Intl.DateTimeFormat(undefined, {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        }).format(new Date())}`;
+      }
+      els.refresh.disabled = false;
+    }
+
+    function setupTabs() {
+      const tabs = [...document.querySelectorAll('[role="tab"]')];
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => activateTab(tab));
+        tab.addEventListener('keydown', event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          let target = index;
+          if (event.key === 'ArrowLeft') target = (index - 1 + tabs.length) % tabs.length;
+          if (event.key === 'ArrowRight') target = (index + 1) % tabs.length;
+          if (event.key === 'Home') target = 0;
+          if (event.key === 'End') target = tabs.length - 1;
+          activateTab(tabs[target]);
+          tabs[target].focus();
+        });
+      });
+    }
+
+    function activateTab(selected) {
+      document.querySelectorAll('[role="tab"]').forEach(tab => {
+        const active = tab === selected;
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+        document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+      });
+    }
+
+    els.refresh.addEventListener('click', loadData);
+    els.moreUpcoming.addEventListener('click', () => {
+      state.showAllUpcoming = !state.showAllUpcoming;
       renderGames();
-      resultsUpdated.textContent = `Päivitetty ${new Date().toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit' })}`;
-    } catch (error) {
-      resultsStatus.classList.add('error');
-      resultsStatus.textContent = `Otteluiden lataus epäonnistui: ${error.message}. Tarkista verkkoyhteys tai API:n CORS-asetukset.`;
-    } finally {
-      refreshResults.disabled = false;
-    }
-  }
+    });
+    els.morePlayed.addEventListener('click', () => {
+      state.showAllPlayed = !state.showAllPlayed;
+      renderGames();
+    });
 
-  function showView(view) {
-    const showStandings = view === 'standings';
-    standingsPanel.hidden = !showStandings;
-    resultsPanel.hidden = showStandings;
-    document.querySelector('#standings-help').hidden = !showStandings;
-    document.querySelector('#results-help').hidden = showStandings;
-    document.querySelector('#tab-standings').setAttribute('aria-selected', String(showStandings));
-    document.querySelector('#tab-results').setAttribute('aria-selected', String(!showStandings));
-    if (!showStandings && !resultsLoaded) loadGames();
-  }
-
-  table.querySelector('thead').addEventListener('click', event => {
-    const button = event.target.closest('button[data-key]');
-    if (!button || !teams.length) return;
-    const key = button.dataset.key;
-    if (key === sortKey) sortDirection *= -1;
-    else { sortKey = key; sortDirection = key === 'ranking' ? 1 : -1; }
-    renderStandings();
-  });
-  refresh.addEventListener('click', loadStandings);
-  refreshResults.addEventListener('click', loadGames);
-  resultFilter.addEventListener('change', renderGames);
-  document.querySelector('#tab-standings').addEventListener('click', () => showView('standings'));
-  document.querySelector('#tab-results').addEventListener('click', () => showView('results'));
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
-    renderStandings();
-    if (resultsLoaded) renderGames();
-  });
-  loadStandings();
-})();
-</script>
+    els.seasonLabel.textContent = seasonText(state.season);
+    setupTabs();
+    loadData();
+  </script>
 </body>
 </html>
