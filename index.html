@@ -84,16 +84,19 @@
       text-transform: uppercase;
     }
 
-    .playoff-line td{
-      border-top:3px solid #4caf50 !important;
+    .top4 .position {
+      background:#2e7d32;
+      color:white;
     }
 
-    .preplayoff-line td{
-      border-top:3px solid #2196f3 !important;
+    .playoff .position {
+      background:#1565c0;
+      color:white;
     }
 
-    .playout-line td{
-      border-top:3px solid #ff9800 !important;
+    .bottom .position {
+      background:#d32f2f;
+      color:white;
     }
 
     h1 {
@@ -955,16 +958,14 @@
       state.standings.forEach(team => {
         const row = el('tr');
 
-        if (team.position === 5) {
-          row.classList.add('playoff-line');
+        if (team.position <= 4) {
+          row.classList.add('top4');
         }
-
-        if (team.position === 13) {
-          row.classList.add('preplayoff-line');
+        else if (team.position <= 12) {
+          row.classList.add('playoff');
         }
-
-        if (team.position === 16) {
-          row.classList.add('playout-line');
+        else if (team.position >= 16) {
+          row.classList.add('bottom');
         }
 
         const positionCell = el('td', { attrs: { 'data-label': 'Position' } }, [
